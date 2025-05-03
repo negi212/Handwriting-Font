@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>手書き文字入力</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        canvas {
+            display: block;
+            width: 300px;     /* 固定幅 */
+            height: 300px;    /* 固定高さ */
+            border: 2px solid #007BFF;
+            touch-action: none;
+            background-color: #fff;
+            margin: 0 auto;   /* 中央寄せ */
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        button.save {
+            background-color: #28a745;
+            font-size: 20px;
+            padding: 15px 30px;
+        }
+        button.clear {
+            background-color: #dc3545;
+        }
+        button.prev {
+            background-color: #6c757d;
+        }
+        button.next {
+            background-color: #ffc107;
+        }
+        button.exit {
+            background-color: #343a40;
+        }
+        select {
+            padding: 5px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        #message {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <h1>手書き文字入力</h1>
+
+    <label for="charType">文字タイプを選択:</label>
+    <select id="charType" onchange="updateChars()">
+        <option value="uppercase">大文字 (A-Z)</option>
+        <option value="lowercase">小文字 (a-z)</option>
+        <option value="numbers">数字 (0-9)</option>
+        <option value="hiragana">ひらがな</option>
+        <option value="katakana">カタカナ</option>
+    </select>
+
+    <h2 id="instruction">「A」を書いてください</h2>
+
+    <canvas id="canvas" width="300" height="300"></canvas>
+
+
+    <button class="save" onclick="save()">保存</button><br>
+    <button class="prev" onclick="prevChar()">前の文字へ</button>
+    <button class="clear" onclick="clearCanvas()">クリア</button>
+    <button class="next" onclick="nextChar()">スキップ</button><br>
+    <button class="exit" onclick="exitApp()">終了</button>
+
+    <div id="message"></div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        const instruction = document.getElementById('instruction');
+        const charTypeSelect = document.getElementById('charType');
+        const message = document.getElementById('message');
+
+        let chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        let currentIndex = 0;
+
+        let drawing = false;
+
+        // 手書きキャンバスをクリア
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 十字を描画
+            ctx.globalAlpha = 1.0; // 十字の透明度
+            ctx.strokeStyle = '#ccc'; // 十字の色
+            ctx.lineWidth = 1; // 十字の線の太さ
+
+            // 縦線
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+
+            // 横線
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height / 2);
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.stroke();
+        }
+
+        // ページ読み込み時に十字線を描画
+        window.onload = function() {
+            clearCanvas();
+        };
+
+        // 手書き開始
+        function startDraw(e) {
+            drawing = true;
+            ctx.beginPath();
+            draw(e);
+        }
+
+        function updateChars() {
+            const charType = charTypeSelect.value;
+
+            if (charType === 'uppercase') {
+                chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+            } else if (charType === 'lowercase') {
+                chars = 'abcdefghijklmnopqrstuvwxyz'.split('');
+            } else if (charType === 'numbers') {
+                chars = '0123456789'.split('');
+            } else if (charType === 'hiragana') {
+                chars = 'あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほらりるれろわをん'.split('');
+            } else if (charType === 'katakana') {
+                chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホラリルレロワヲン'.split('');
+            }
+
+            currentIndex = 0; // インデックスをリセット
+            instruction.textContent = `「${chars[currentIndex]}」を書いてください`;
+            clearCanvas(); // キャンバスをクリア
+            document.querySelector('button.save').disabled = false; // 保存ボタンを有効化
+        }
+
+        // 手書き終了
+        function endDraw() {
+            drawing = false;
+            ctx.beginPath();
+        }
+
+        // 手書き描画
+        function draw(e) {
+            if (!drawing) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+            const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+
+            ctx.lineWidth = 5;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = 'black';
+
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        canvas.addEventListener('mousedown', startDraw);
+        canvas.addEventListener('mouseup', endDraw);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('touchstart', startDraw);
+        canvas.addEventListener('touchend', endDraw);
+        canvas.addEventListener('touchmove', draw);
+
+        function save() {
+            const dataURL = canvas.toDataURL('image/png');
+            const formData = new FormData();
+            formData.append('image', dataURL);
+            formData.append('char', chars[currentIndex]);
+            formData.append('charType', charTypeSelect.value); // 文字タイプを追加
+
+            fetch('/save', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(text => {
+                message.textContent = text;
+                clearCanvas();
+                currentIndex++;
+                if (currentIndex < chars.length) {
+                    instruction.textContent = `「${chars[currentIndex]}」を書いてください`;
+                } else {
+                    instruction.textContent = "すべての文字を書き終えました！";
+                    document.querySelector('button.save').disabled = true;
+                }
+            });
+        }
+
+        function prevChar() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                instruction.textContent = `「${chars[currentIndex]}」を書いてください`;
+                message.textContent = "前の文字に戻りました。";
+                clearCanvas();
+            } else {
+                message.textContent = "最初の文字です。";
+            }
+        }
+
+        function nextChar() {
+            clearCanvas();
+            currentIndex++;
+            if (currentIndex < chars.length) {
+                instruction.textContent = `「${chars[currentIndex]}」を書いてください`;
+                message.textContent = "次の文字に進みました。";
+            } else {
+                instruction.textContent = "すべての文字を書き終えました！";
+                document.querySelector('button.save').disabled = true;
+                message.textContent = "";
+            }
+        }
+
+        function exitApp() {
+            if (confirm("終了するにはターミナルでCtrl+Cを入力してください。")) {
+                fetch('/exit', { method: 'POST' });
+            }
+        }
+    </script>
+</body>
+</html>
